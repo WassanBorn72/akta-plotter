@@ -20,7 +20,9 @@ def main():
                '--hidden-import', 'matplotlib.backends.backend_agg',
                '--hidden-import', 'matplotlib.backends.backend_svg',
                '--hidden-import', 'matplotlib.backends.backend_pdf',
-               '--hidden-import', 'matplotlib.backends.backend_tkagg']
+               '--hidden-import', 'matplotlib.backends.backend_tkagg',
+               '--hidden-import', 'PIL._tkinter_finder',
+               '--hidden-import', 'PIL._imagingtk']
     if platform.system() == 'Linux':
         # Some Python distributions keep Tcl/Tk outside the system loader paths.
         for pattern in ('libtcl*.so*', 'libtk*.so*'):
