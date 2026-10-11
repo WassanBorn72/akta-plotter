@@ -1,0 +1,8 @@
+Chrom.1		Chrom.1		Chrom.1		Chrom.1		Chrom.1		Chrom.1	
+UV 280		UV 480		Conductivity		Concentration		Pressure		Injection	
+ml	mAU	ml	mAU	ml	mS/cm	ml	%	ml	MPa	ml	Injection
+0	0	0	0	0	5	0	0	0	0.1	0	Start
+1	20	0.8	8	1	6	1	10	1	0.12		
+2	100	1.8	40	2	8	2	20	2	0.14		
+3	40	2.8	16	3	12	3	40	3	0.13		
+4	0	3.8	0	4	15	4	60	4	0.11		
