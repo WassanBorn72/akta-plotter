@@ -18,7 +18,18 @@ class AxisSettings:
     show_major_numbers: bool = True
     show_minor_numbers: bool = False
 
+    name: str = ""
+    tick_direction: str = "out"
+    axis_width: float = 0.8
+    tick_size: float = 10
+    label_size: float = 10
+
     def validate(self):
+        if self.tick_direction not in ('in', 'out', 'inout'):
+            raise ValueError('目盛りの向きが不正です。')
+        for value in (self.axis_width, self.tick_size, self.label_size):
+            if not math.isfinite(value) or value <= 0:
+                raise ValueError('軸の太さと文字サイズは0より大きい有限の数値にしてください。')
         for name in ('minimum', 'maximum', 'major_step', 'minor_step'):
             value = getattr(self, name)
             if value is not None and not math.isfinite(value):
@@ -31,6 +42,13 @@ class AxisSettings:
 
 
 @dataclass
+class PlotSettings:
+    show_legend: bool = True
+    show_frame: bool = True
+    show_grid: bool = True
+
+
+@dataclass
 class Curve:
     export: Export
     y: str
@@ -38,6 +56,7 @@ class Curve:
     source: str = ''
     color: str = COLORS[0]
     width: float = 1.5
+    caption: str = ""
 
     @property
     def unit(self):
@@ -53,13 +72,13 @@ class Curve:
         return 'mL' if unit.lower() == 'ml' else unit
 
 
-def parse_axis(values, show_major=True, show_minor=False):
+def parse_axis(values, show_major=True, show_minor=False, **style):
     """Blank fields mean automatic; used by the desktop axis dialog."""
     try:
         numbers = [None if not str(v).strip() else float(v) for v in values]
     except (TypeError, ValueError):
         raise ValueError('軸の設定は数値で入力してください（空欄は自動）。') from None
-    settings = AxisSettings(*numbers, show_major, show_minor)
+    settings = AxisSettings(*numbers, show_major, show_minor, **style)
     settings.validate()
     return settings
 
@@ -96,9 +115,18 @@ def apply_axis(axis, direction, settings):
                      labelleft=settings.show_minor_numbers if direction == 'y' and axis.yaxis.get_ticks_position() != 'right' else False,
                      labelright=settings.show_minor_numbers if direction == 'y' and axis.yaxis.get_ticks_position() == 'right' else False)
     target.get_offset_text().set_visible(settings.show_major_numbers)
+    target.get_offset_text().set_fontsize(settings.tick_size)
+    axis.tick_params(axis=direction, which='both', direction=settings.tick_direction,
+                     width=settings.axis_width, labelsize=settings.tick_size)
+    target.label.set_fontsize(settings.label_size)
+    if settings.name.strip():
+        target.label.set_text(settings.name)
+    sides = ('bottom', 'top') if direction == 'x' else ('left', 'right')
+    for side in sides:
+        axis.spines[side].set_linewidth(settings.axis_width)
 
 
-def make_overlay(curves, title='', x_settings=None, y_settings=None, group_units=True):
+def make_overlay(curves, title='', x_settings=None, y_settings=None, group_units=True, plot_settings=None):
     if not curves:
         raise ValueError('表示する曲線を選択してください。')
     if len({c.x_unit for c in curves}) != 1:
@@ -109,7 +137,8 @@ def make_overlay(curves, title='', x_settings=None, y_settings=None, group_units
     base = figure.add_subplot(111)
     base.set_xlabel(curves[0].x_unit)
     base.set_title(title)
-    base.grid(alpha=.25)
+    style = plot_settings or PlotSettings()
+    base.grid(style.show_grid, alpha=.25) if style.show_grid else base.grid(False)
     axes, lines = {}, []
     for curve, key in zip(curves, keys):
         if not math.isfinite(curve.width) or curve.width <= 0:
@@ -128,11 +157,20 @@ def make_overlay(curves, title='', x_settings=None, y_settings=None, group_units
         if curve.source:
             name = f'{curve.source} / {name}'
         lines.extend(axes[key].plot(valid[curve.x_column], valid[curve.y], color=curve.color,
-                                    linewidth=curve.width, label=name))
+                                    linewidth=curve.width, label=curve.caption if curve.caption.strip() else name))
     for key, axis in axes.items():
         apply_axis(axis, 'y', (y_settings or {}).get(key, AxisSettings()))
     apply_axis(base, 'x', x_settings or AxisSettings())
-    base.legend(handles=lines, loc='best')
+    for axis in axes.values():
+        axis.spines['top'].set_visible(style.show_frame)
+        if axis is base:
+            axis.spines['right'].set_visible(style.show_frame and len(axes) == 1)
+        else:
+            # Only this unit's right axis is drawn by a twin axis.
+            axis.spines['left'].set_visible(False)
+            axis.spines['bottom'].set_visible(False)
+    if style.show_legend:
+        base.legend(handles=lines, labels=[line.get_label() for line in lines], loc='best')
     return figure
 
 

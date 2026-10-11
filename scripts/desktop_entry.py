@@ -54,12 +54,22 @@ def main():
                 desktop.messagebox.showerror = fail
                 app.open()
                 app.files[0][3][2][1].set(True)
+                app.files[0][3][1][4].set('Edited caption')
+                app.show_frame.set(False)
+                app.show_grid.set(False)
                 app.draw()
+                if app.figure.axes[0].get_legend().get_texts()[0].get_text() != 'Edited caption':
+                    raise RuntimeError('GUI caption editing failed')
+                if app.figure.axes[0].spines['top'].get_visible():
+                    raise RuntimeError('GUI frame setting failed')
+                app.show_legend.set(False)
                 if len(app.files) != 2 or len(app.figure.axes) != 2:
                     raise RuntimeError('GUI file overlay failed')
                 target = Path(directory) / 'plot.png'
                 desktop.filedialog.asksaveasfilename = lambda **kwargs: str(target)
                 app.save()
+                if app.figure.axes[0].get_legend() is not None:
+                    raise RuntimeError('GUI legend visibility was not applied on save')
                 if not target.exists() or target.stat().st_size < 1000:
                     raise RuntimeError('GUI save failed')
             finally:

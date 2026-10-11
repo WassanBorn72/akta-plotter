@@ -53,3 +53,45 @@ class PlotOptionsTests(unittest.TestCase):
             make_overlay([Curve(self.export, 'UV 280'), Curve(time, 'UV', 'Time')])
         with self.assertRaises(ValueError):
             make_overlay([Curve(self.export, 'UV 280', width=0)])
+
+    def test_axis_names_caption_and_publication_style(self):
+        from akta_plotter.plot import PlotSettings
+        for direction in ('in', 'out', 'inout'):
+            with self.subTest(direction=direction):
+                figure = make_overlay([Curve(self.export, 'UV 280', caption='Sample A'),
+                                       Curve(self.export, 'Conductivity', caption='Buffer')],
+                    x_settings=AxisSettings(name='Volume (mL)', tick_direction=direction,
+                                            axis_width=2, tick_size=14, label_size=18),
+                    y_settings={'mAU': AxisSettings(name='Absorbance (mAU)', axis_width=3,
+                                                   tick_size=12, label_size=16)},
+                    plot_settings=PlotSettings(True, False, False))
+                left, right = figure.axes
+                self.assertEqual(left.get_xlabel(), 'Volume (mL)')
+                self.assertEqual(left.get_ylabel(), 'Absorbance (mAU)')
+                self.assertEqual(right.get_ylabel(), 'mS/cm')
+                self.assertEqual(left.xaxis.label.get_fontsize(), 18)
+                self.assertEqual(left.yaxis.label.get_fontsize(), 16)
+                self.assertEqual(left.spines['bottom'].get_linewidth(), 2)
+                self.assertEqual(left.spines['left'].get_linewidth(), 3)
+                self.assertEqual(left.xaxis.get_major_ticks()[0].get_tickdir(), direction)
+                self.assertEqual(left.xaxis.get_minor_ticks()[0].get_tickdir(), direction)
+                self.assertEqual(left.xaxis.get_major_ticks()[0].label1.get_fontsize(), 14)
+                self.assertFalse(left.spines['top'].get_visible())
+                self.assertFalse(left.spines['right'].get_visible())
+                self.assertTrue(right.spines['right'].get_visible())
+                self.assertFalse(any(line.get_visible() for line in left.get_xgridlines()))
+                self.assertEqual([text.get_text() for text in left.get_legend().get_texts()], ['Sample A', 'Buffer'])
+                output = io.BytesIO()
+                figure.savefig(output, format='svg')
+                self.assertIn(b'Sample A', output.getvalue())
+                self.assertIn(b'Volume (mL)', output.getvalue())
+        figure = make_overlay([Curve(self.export, 'UV 280')], plot_settings=PlotSettings(False, False, True))
+        self.assertIsNone(figure.axes[0].get_legend())
+        self.assertFalse(figure.axes[0].spines['right'].get_visible())
+        self.assertTrue(any(line.get_visible() for line in figure.axes[0].get_xgridlines()))
+
+    def test_invalid_axis_appearance(self):
+        for options in ({'axis_width': 0}, {'tick_size': -1}, {'label_size': float('nan')},
+                        {'tick_direction': 'invalid'}):
+            with self.subTest(options=options), self.assertRaises(ValueError):
+                make_overlay([Curve(self.export, 'UV 280')], x_settings=AxisSettings(**options))

@@ -6,7 +6,7 @@ from tkinter import colorchooser, filedialog, messagebox, ttk
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from . import __version__
 from .data import read_export, label
-from .plot import COLORS, Curve, make_overlay, parse_axis
+from .plot import COLORS, Curve, make_overlay, parse_axis, PlotSettings
 
 
 class App:
@@ -32,7 +32,13 @@ class App:
         ttk.Label(controls, text='グラフタイトル').pack(anchor='w')
         ttk.Entry(controls, textvariable=self.title).pack(fill='x')
         ttk.Button(controls, text='軸の設定', command=self.edit_axes).pack(fill='x', pady=6)
-        ttk.Button(controls, text='プロット更新', command=self.draw).pack(fill='x')
+        self.show_legend = tk.BooleanVar(value=True)
+        self.show_frame = tk.BooleanVar(value=True)
+        self.show_grid = tk.BooleanVar(value=True)
+        for text, variable in [('キャプション（凡例）を表示', self.show_legend),
+                               ('外枠を表示', self.show_frame), ('罫線を表示', self.show_grid)]:
+            ttk.Checkbutton(controls, text=text, variable=variable).pack(anchor='w')
+        ttk.Button(controls, text='プロット更新' , command=self.draw).pack(fill='x')
         ttk.Button(controls, text='画像を保存', command=self.save).pack(fill='x', pady=6)
         self.dpi = tk.StringVar(value='200')
         ttk.Label(controls, text='出力解像度 (DPI: 72〜600)').pack(anchor='w')
@@ -78,7 +84,12 @@ class App:
                     button.configure(command=lambda v=color, b=button: self.pick_color(v, b))
                     button.pack(side='right')
                     ttk.Entry(row, textvariable=width, width=5).pack(side='right')
-                    rows.append((name, selected, color, width))
+                    caption = tk.StringVar(value='')
+                    caption_row = ttk.Frame(panel)
+                    caption_row.pack(fill='x', pady=(0, 5))
+                    ttk.Label(caption_row, text='凡例').pack(side='left')
+                    ttk.Entry(caption_row, textvariable=caption, width=28).pack(side='left', fill='x', expand=True)
+                    rows.append((name, selected, color, width, caption))
                 self.files.append((export, source, x, rows))
             except Exception as exc:
                 errors.append(f'{Path(path).name}: {exc}')
@@ -107,14 +118,17 @@ class App:
     def curves(self):
         curves = []
         for export, source, x, rows in self.files:
-            for name, selected, color, width in rows:
+            for name, selected, color, width, caption in rows:
                 if selected.get() and (export.signal_x or name != x.get()):
                     try:
                         size = float(width.get())
                     except ValueError:
                         raise ValueError(f'{name}: 線の太さを数値で入力してください。') from None
-                    curves.append(Curve(export, name, None if export.signal_x else x.get(), source, color.get(), size))
+                    curves.append(Curve(export, name, None if export.signal_x else x.get(), source, color.get(), size, caption.get()))
         return curves
+
+    def plot_settings(self):
+        return PlotSettings(self.show_legend.get(), self.show_frame.get(), self.show_grid.get())
 
     def edit_axes(self):
         try:
@@ -145,15 +159,36 @@ class App:
             major, minor = tk.BooleanVar(value=stored[1]), tk.BooleanVar(value=stored[2])
             ttk.Checkbutton(tab, text='主目盛りの数値を表示', variable=major).grid(row=4, columnspan=2, sticky='w')
             ttk.Checkbutton(tab, text='副目盛りの数値を表示', variable=minor).grid(row=5, columnspan=2, sticky='w')
-            fields[key] = (values, major, minor)
+            previous = self.x_settings if key == 'x' else self.y_settings.get(key[2:])
+            style = {}
+            for row, (field, text, default) in enumerate([
+                ('name', '軸名（空欄は単位）', ''),
+                ('axis_width', '軸・目盛りの太さ (pt)', 0.8),
+                ('tick_size', '目盛りの文字サイズ (pt)', 10),
+                ('label_size', '軸名の文字サイズ (pt)', 10)], start=6):
+                variable = tk.StringVar(value=getattr(previous, field, default))
+                ttk.Label(tab, text=text).grid(row=row, column=0, sticky='w')
+                ttk.Entry(tab, textvariable=variable).grid(row=row, column=1, pady=3)
+                style[field] = variable
+            direction_names = {'in': '内向き', 'out': '外向き', 'inout': '交差'}
+            direction = tk.StringVar(value=direction_names[getattr(previous, 'tick_direction', 'out')])
+            ttk.Label(tab, text='目盛りの向き').grid(row=10, column=0, sticky='w')
+            ttk.Combobox(tab, textvariable=direction, values=list(direction_names.values()), state='readonly').grid(row=10, column=1)
+            fields[key] = (values, major, minor, style, direction)
 
         def apply():
             try:
                 saved = {key: ([v.get() for v in values], major.get(), minor.get())
-                         for key, (values, major, minor) in fields.items()}
-                parsed = {key: parse_axis(*value) for key, value in saved.items()}
+                         for key, (values, major, minor, style, direction) in fields.items()}
+                parsed = {}
+                for key, value in saved.items():
+                    style, direction = fields[key][3:]
+                    options = {field: variable.get() if field == 'name' else float(variable.get())
+                               for field, variable in style.items()}
+                    options['tick_direction'] = {v: k for k, v in direction_names.items()}[direction.get()]
+                    parsed[key] = parse_axis(*value, **options)
                 y_settings = {unit: parsed['y:' + unit] for unit in units}
-                figure = make_overlay(curves, self.title.get(), parsed['x'], y_settings)
+                figure = make_overlay(curves, self.title.get(), parsed['x'], y_settings, plot_settings=self.plot_settings())
                 self.axis_values.update(saved)
                 self.x_settings, self.y_settings = parsed['x'], y_settings
                 self.render(figure)
@@ -173,7 +208,7 @@ class App:
 
     def draw(self):
         try:
-            figure = make_overlay(self.curves(), self.title.get(), self.x_settings, self.y_settings)
+            figure = make_overlay(self.curves(), self.title.get(), self.x_settings, self.y_settings, plot_settings=self.plot_settings())
             self.render(figure)
         except Exception as exc:
             messagebox.showerror('プロットエラー', str(exc))
@@ -183,7 +218,7 @@ class App:
             return
         try:
             # Render current controls, even when Update has not been pressed.
-            figure = make_overlay(self.curves(), self.title.get(), self.x_settings, self.y_settings)
+            figure = make_overlay(self.curves(), self.title.get(), self.x_settings, self.y_settings, plot_settings=self.plot_settings())
             dpi = int(self.dpi.get())
             if not 72 <= dpi <= 600:
                 raise ValueError('DPIは72〜600の整数を入力してください。')
