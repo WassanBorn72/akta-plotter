@@ -2,6 +2,7 @@
 from pathlib import Path
 import tkinter as tk
 import sys
+from tkinter import font as tkfont
 from tkinter import colorchooser, filedialog, messagebox, ttk
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from . import __version__
@@ -38,11 +39,23 @@ class App:
         for text, variable in [('キャプション（凡例）を表示', self.show_legend),
                                ('外枠を表示', self.show_frame), ('罫線を表示', self.show_grid)]:
             ttk.Checkbutton(controls, text=text, variable=variable).pack(anchor='w')
-        ttk.Button(controls, text='プロット更新' , command=self.draw).pack(fill='x')
         ttk.Button(controls, text='画像を保存', command=self.save).pack(fill='x', pady=6)
         self.dpi = tk.StringVar(value='200')
         ttk.Label(controls, text='出力解像度 (DPI: 72〜600)').pack(anchor='w')
         ttk.Entry(controls, textvariable=self.dpi).pack(fill='x')
+        # Keep the primary action visible below the scrollable curve settings.
+        action_area = ttk.Frame(controls)
+        action_area.pack(side='bottom', fill='x', pady=(10, 0))
+        accent = tk.Frame(action_area, background='#2563eb', padx=3, pady=3)
+        accent.pack(fill='x')
+        self.update_font = tkfont.nametofont('TkDefaultFont').copy()
+        self.update_font.configure(size=12, weight='bold')
+        ttk.Style(root).configure('PlotUpdate.TButton', font=self.update_font, padding=(16, 12))
+        self.update_button = ttk.Button(accent, text='プロット更新',
+                                       style='PlotUpdate.TButton', command=self.draw)
+        self.update_button.pack(fill='x')
+        ttk.Label(action_area, text='設定を変更したら、このボタンを押してください。',
+                  wraplength=320, justify='left').pack(fill='x', pady=(6, 0))
         ttk.Label(controls, text='各曲線: 表示 / 色 / 太さ (pt)').pack(anchor='w', pady=8)
         canvas = tk.Canvas(controls, width=330, highlightthickness=0)
         scrollbar = ttk.Scrollbar(controls, orient='vertical', command=canvas.yview)
