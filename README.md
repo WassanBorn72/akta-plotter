@@ -1,6 +1,6 @@
 # AKTA Plotter
 
-AKTA / UNICORNで書き出したCSVからクロマトグラムを作成するアプリです。複数の測定結果を重ねて比較し、軸や線の見た目を調整して画像に保存できます。Windows・Mac・Linuxに対応しています。
+AKTA / UNICORNで書き出したCSVからクロマトグラムを作成するアプリです。複数の測定結果を重ねて比較し、軸や線の見た目を調整して画像に保存できます。Windows・macOS 12（Monterey）以降・Linuxに対応しています。
 
 ## ダウンロード・起動
 

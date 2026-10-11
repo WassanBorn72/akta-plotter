@@ -21,13 +21,16 @@ jobs:
             artifact: windows-x64
           - os: macos-15-intel
             artifact: macos-intel
+            wheel_platform: macosx_12_0_x86_64
           - os: macos-15
             artifact: macos-apple-silicon
+            wheel_platform: macosx_12_0_arm64
           - os: ubuntu-22.04
             artifact: linux-x64
     runs-on: ${{ matrix.os }}
     env:
       MPLBACKEND: Agg
+      MACOSX_DEPLOYMENT_TARGET: '12.0'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -36,8 +39,17 @@ jobs:
       - name: Install Linux GUI libraries
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y python3-tk xvfb
-      - name: Install build dependencies
+      - name: Install build dependencies (Windows and Linux)
+        if: runner.os != 'macOS'
         run: python -m pip install -r requirements-build.txt
+      - name: Install macOS 12 compatible dependencies
+        if: runner.os == 'macOS'
+        env:
+          WHEEL_PLATFORM: ${{ matrix.wheel_platform }}
+        run: |
+          python -m pip download --only-binary=:all: --platform "$WHEEL_PLATFORM" --dest compatible-wheels -r requirements-build.txt
+          python -m pip install --force-reinstall --no-index --find-links compatible-wheels -r requirements-build.txt
+
       - name: Verify release version
         if: startsWith(github.ref, 'refs/tags/v')
         shell: bash
@@ -47,6 +59,9 @@ jobs:
         run: python -m unittest discover -s tests -v
       - name: Build
         run: python scripts/build_desktop.py
+      - name: Verify macOS deployment requirements
+        if: runner.os == 'macOS'
+        run: python scripts/check_macos_target.py dist/AKTA-Plotter.app --maximum 12.0
       - name: Verify native application icon
         run: python scripts/check_native_icon.py
       - name: Verify bundled runtime (Windows)

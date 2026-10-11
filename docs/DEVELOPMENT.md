@@ -39,7 +39,10 @@ UNICORN形式では2行目に信号名、3行目に単位、4行目以降に数�
 
 ## テスト
 
+配布版の互換性検査も含めるため、ビルド用の依存関係を導入して実行します。
+
 ```sh
+python -m pip install -r requirements-build.txt
 python -m unittest discover -s tests -v
 ```
 
@@ -118,3 +121,9 @@ python scripts/convert_icon.py path/to/artwork.png
 ```
 
 配布版のGUIチェックでは、同梱PNGが読み込めることも確認します。
+
+## macOSの最低対応バージョン
+
+配布版はmacOS 12.0以降を対象にします。CIの依存ダウンロードに `--platform macosx_12_0_arm64` / `macosx_12_0_x86_64` を指定し、ビルドマシンの新しいOSにだけ対応したwheelを避けます。NumPyは同じバージョンでもmacOS 11用と14用のwheelがあり、通常のpip installではビルドマシンに合わせて14用が選ばれることがあります。
+
+バンドルのLSMinimumSystemVersionを12.0に設定し、全Mach-OファイルのLC_BUILD_VERSION / LC_VERSION_MIN_MACOSXを `scripts/check_macos_target.py` で検査します。メタデータだけを変更して非互換のバイナリを通すことはしません。CIの起動検証は新しいOS上で行われるため、macOS 12実機での動作確認は別途必要です。
