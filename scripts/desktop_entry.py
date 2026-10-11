@@ -11,12 +11,14 @@ def self_test():
     from akta_plotter.data import read_export
     from akta_plotter.plot import AxisSettings, Curve, make_overlay
     raw = ('Chrom.1\t\tChrom.1\t\tChrom.1\t\n'
-           'UV\t\tConductivity\t\tInjection\t\n'
-           'ml\tmAU\tml\tmS/cm\tml\tInjection\n'
-           '0\t10\t0\t5\t0\tInject\n1\t20\t1\t6\t\t\n').encode('utf-16')
+           'UV\t\tInjection\t\tConductivity\t\n'
+           'ml\tmAU\tml\tInjection\tml\tmS/cm\n'
+           '0\t10\t0\t99\t0\t5\n1\t20\t1\t99\t1\t6\n').encode('utf-16')
     export = read_export(raw)
     figure = make_overlay([Curve(export, y) for y in export.signal_x],
                           x_settings=AxisSettings(0, 2, 1, .5))
+    if list(export.signal_x) != ['UV', 'Conductivity']:
+        raise RuntimeError('Bundled signal exclusion/right-side check failed')
     if len(figure.axes) != 2 or figure.axes[0].get_xlabel() != 'mL':
         raise RuntimeError('Bundled plotting check failed')
     for fmt in ('png', 'svg', 'pdf'):

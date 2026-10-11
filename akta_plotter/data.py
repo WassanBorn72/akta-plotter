@@ -6,6 +6,11 @@ from dataclasses import dataclass, field
 import pandas as pd
 
 
+# Match whole signal names, so similarly named measured curves remain selectable.
+EXCLUDED_SIGNALS = frozenset(name.casefold() for name in (
+    'Injection', 'Run Log', 'Fraction', 'UV 1_280_CUT_TEMP@100,BASEM'))
+
+
 @dataclass
 class Export:
     frame: pd.DataFrame
@@ -44,21 +49,19 @@ def read_export(raw: bytes) -> Export:
     if first is None:
         raise ValueError('2列以上の数値データが見つかりません。')
     # UNICORN exports name each signal on row 2, with its own X/Y pair.
-    # Keep numeric signals before Injection; later columns are events
-    # or derived curves and must not enter the signal selector.
+    # Scan all X/Y pairs; exclude only the named event/derived signals.
     if len(rows) >= 4 and first == 3:
         header, unit_row = rows[1], rows[2]
-        boundary = next((i for i, v in enumerate(header)
-                         if v.strip().casefold() == 'injection'), len(header))
-        paired = boundary > 0 and any(
+        paired = any(
             header[i].strip() and i + 1 < len(unit_row)
             and unit_row[i].strip().casefold() == 'ml'
             and i + 1 < len(header) and not header[i + 1].strip()
-            for i in range(boundary))
+            for i in range(len(header)))
         if paired:
             data, units, signal_x = {}, {}, {}
-            for i in range(boundary):
-                if (not header[i].strip() or i + 1 >= boundary
+            for i in range(len(header)):
+                if (not header[i].strip() or header[i].strip().casefold() in EXCLUDED_SIGNALS
+                        or i + 1 >= len(header)
                         or i + 1 >= len(unit_row)
                         or unit_row[i].strip().casefold() != 'ml'
                         or i + 1 >= len(header) or header[i + 1].strip()):
@@ -79,7 +82,7 @@ def read_export(raw: bytes) -> Export:
                 signal_x[name] = x_name
             frame = pd.DataFrame(data).dropna(how='all')
             if not signal_x or frame.empty:
-                raise ValueError('Injectionより左にmLに対応する数値曲線が見つかりません。')
+                raise ValueError('除外対象以外にmLに対応する数値曲線が見つかりません。')
             return Export(frame, units, encoding, delimiter, signal_x)
     width = len(rows[first])
     preceding = [row for row in rows[:first] if len(row) == width]

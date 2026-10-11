@@ -20,7 +20,7 @@ class ExportTests(unittest.TestCase):
         figure = make_figure(export, 'Volume', ['UV'])
         self.assertEqual(list(figure.axes[0].lines[0].get_xdata()), [0, 2])
 
-    def test_unicorn_signal_pairs_before_injection(self):
+    def test_unicorn_signal_pairs_on_both_sides_of_injection(self):
         text = ('Chrom.1\t\tChrom.1\t\tChrom.1\t\tChrom.1\t\n'
                 'UV 3_480\t\tUV 1_280\t\tInjection\t\tUV derived\t\n'
                 'ml\tmAU\tml\tmAU\tml\tInjection\tml\tmAU\n'
@@ -28,8 +28,8 @@ class ExportTests(unittest.TestCase):
                 '1\t11\t0.6\t21\t\t\t1\t999\n'
                 '\t\t0.7\t22\t\t\t2\t999\n')
         export = read_export(text.encode('utf-16'))
-        self.assertEqual(list(export.signal_x), ['UV 3_480', 'UV 1_280'])
-        self.assertNotIn('UV derived', export.frame)
+        self.assertEqual(list(export.signal_x), ['UV 3_480', 'UV 1_280', 'UV derived'])
+        self.assertNotIn('Injection', export.frame)
         figure = make_figure(export, None, list(export.signal_x))
         self.assertEqual(len(figure.axes), 1)
         axis = figure.axes[0]
@@ -38,6 +38,37 @@ class ExportTests(unittest.TestCase):
         self.assertEqual(list(axis.lines[0].get_xdata()), [0, 1])
         self.assertEqual(list(axis.lines[1].get_xdata()), [.5, .6, .7])
         self.assertEqual(list(axis.lines[1].get_ydata()), [20, 21, 22])
+        self.assertEqual(list(axis.lines[2].get_ydata()), [999, 999, 999])
+
+    def test_named_exclusions_and_only_right_side_curves(self):
+        import csv
+        import io
+        names = ['Injection', 'Run Log', 'Fraction', 'UV 1_280_CUT_TEMP@100,BASEM',
+                 'UV 1_280', 'UV 1_280_CUT_TEMP@100,BASEM extra', 'Injection pressure',
+                 'UV 1_280', 'Empty signal']
+        rows = [['Chrom.1', ''] * len(names),
+                [cell for name in names for cell in (name, '')],
+                [cell for name in names for cell in ('ml', 'mAU')],
+                [cell for i in range(len(names)) for cell in (str(i / 10), str(i + 1) if i < 8 else 'event')],
+                [cell for i in range(len(names)) for cell in (str(i / 10 + 1), str(i + 11) if i < 8 else 'end')]]
+        # The comma in the excluded name must also work in quoted comma CSV.
+        for delimiter in (',', '\t'):
+            with self.subTest(delimiter=delimiter):
+                output = io.StringIO()
+                csv.writer(output, delimiter=delimiter).writerows(rows)
+                export = read_export(output.getvalue().encode('utf-16'))
+                self.assertEqual(list(export.signal_x), ['UV 1_280',
+                    'UV 1_280_CUT_TEMP@100,BASEM extra', 'Injection pressure', 'UV 1_280 (2)'])
+                figure = make_figure(export, None, list(export.signal_x))
+                self.assertEqual(list(figure.axes[0].lines[0].get_xdata()), [.4, 1.4])
+                self.assertEqual(list(figure.axes[0].lines[0].get_ydata()), [5, 15])
+                self.assertEqual(list(figure.axes[0].lines[3].get_ydata()), [8, 18])
+
+    def test_all_paired_signals_excluded(self):
+        raw = ('Chrom.1\t\tChrom.1\t\nInjection\t\tFraction\t\n'
+               'ml\tmAU\tml\tmAU\n0\t1\t0\t2\n1\t3\t1\t4\n')
+        with self.assertRaisesRegex(ValueError, '除外対象以外'):
+            read_export(raw.encode())
 
     def test_mixed_units_share_only_matching_axes(self):
         export = read_export((Path(__file__).resolve().parents[1] / 'examples/mixed_units.tsv').read_bytes())
