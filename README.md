@@ -40,6 +40,66 @@ python -m streamlit run browser_app.py --server.address 127.0.0.1
 
 表示されたローカルアドレスをブラウザで開いてCSVを複数アップロードします。ファイルごとの表示曲線・色・太さを選択し、横軸と単位ごとの縦軸の範囲・目盛り・数値表示を設定できます。PNG / SVG / PDFの保存ボタンで設定を反映した画像をダウンロードできます。処理はStreamlitを起動したPC上で行われます。Pythonが必要なサーバー型アプリで、静的HTMLだけで動く版ではありません。外部公開する場合は別途認証や配備設定が必要です。
 
+## Macでブラウザ版を起動する手順
+
+1. [Python公式サイト](https://www.python.org/downloads/macos/)からPython 3.12以上をインストールします。
+2. 「ターミナル」を開き、以下を順に実行します。初回のコード取得にはインターネットが必要です。同名のフォルダが既にある場合は、そのフォルダを使用してください。
+
+```sh
+cd ~/Downloads
+curl -fL https://github.com/WassanBorn72/akta-plotter/archive/refs/heads/main.zip -o akta-plotter-main.zip
+unzip akta-plotter-main.zip
+cd akta-plotter-main
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+python -m streamlit run browser_app.py --server.address 127.0.0.1
+```
+
+3. SafariまたはChromeで `http://localhost:8501` を開きます。CSVを複数選択し、表示曲線・軸・線を調整して画像を保存できます。データはこのMac上で処理されます。
+4. 終了はターミナルで `Control + C`。次回は以下だけで起動できます。
+
+```sh
+cd ~/Downloads/akta-plotter-main
+source .venv/bin/activate
+python -m streamlit run browser_app.py --server.address 127.0.0.1
+```
+
+サーバー起動中はターミナルを開いたままにしてください。ポート8501が使用中なら `--server.port 8502` を付け、`http://localhost:8502` を開きます。
+
+## Python不要のデスクトップ配布版
+
+[GitHub Actions](https://github.com/WassanBorn72/akta-plotter/actions/workflows/build-desktop.yml)でOS別のアプリをビルドします。対象コードのmainへのpush、バージョンタグ、または「Run workflow」で実行されます。成功した実行のArtifactsから自分のOSのファイルをダウンロードし、GitHub側の外側のZIPを展開後、中のZIP / tar.gzを展開してください。ArtifactsのダウンロードにはGitHubへのログインが必要です。
+
+| 配布名 | 対象 | 起動ファイル |
+| --- | --- | --- |
+| macos-apple-silicon | MシリーズMac | AKTA-Plotter.app |
+| macos-intel | Intel Mac | AKTA-Plotter.app |
+| windows-x64 | Windows 64bit | AKTA-Plotter/AKTA-Plotter.exe |
+| linux-x64 | Linux x86_64（GUI環境、glibc 2.35以上） | AKTA-Plotter/AKTA-Plotter |
+
+Macは `.app` をアプリケーションフォルダへ移動して起動します。Windows / Linuxは `AKTA-Plotter` フォルダ全体を保持してください。内部ファイルも必要です。いずれもPythonを別途インストールする必要はありません。データはローカルで処理し、通常の利用にインターネットは不要です。
+
+配布版は現時点では開発者署名・Apple公証を行っていません。MacやWindowsで初回起動時に警告が出る場合は、入手元を確認し、OSの通常の許可画面を使用してください。Macではシステム設定の「プライバシーとセキュリティ」に許可操作が表示される場合があります。セキュリティ設定を全体で無効化する必要はありません。
+
+### 自分のPCでビルドする場合
+
+対象OS上のPython 3.12とTkを使い、プロジェクトのルートで実行します。別OS向けのクロスコンパイルはできません。
+
+```sh
+python -m venv .build-venv
+```
+
+Windowsは `.build-venv\Scripts\activate`、Mac / Linuxは `source .build-venv/bin/activate` で有効にします。
+
+```sh
+python -m pip install -r requirements-build.txt
+python -m unittest discover -s tests -v
+python scripts/build_desktop.py
+```
+
+完成品は `dist/` に生成されます。診断用のコンソール付きビルドは `python scripts/build_desktop.py --console` です。生成物はコミットしません。
+
 ## 読み込み形式と制限
 
 - コンマ・セミコロン・タブ区切り、UTF-8・BOM付きUTF-16・CP932・CP1252を扱います。
@@ -57,4 +117,4 @@ python -m streamlit run browser_app.py --server.address 127.0.0.1
 python -m unittest discover -s tests -v
 ```
 
-数値列・単位・重複ヘッダー・UTF-16・欠損値・小数コンマ・単位ごとのY軸と、実際に描画する座標を検証します。OS別の配布用実行ファイルはまだ作成していません。
+数値列・単位・重複ヘッダー・UTF-16・欠損値・小数コンマ・単位ごとのY軸と、実際に描画する座標を検証します。配布版のビルドでは、同梱環境でのCSV・描画・PNG/SVG/PDF出力の検証とGUI起動チェックも実行します。各OS版の完成可否はGitHub Actionsの実行結果を確認してください。
