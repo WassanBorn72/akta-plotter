@@ -1,0 +1,95 @@
+# 開発者向けドキュメント
+
+利用者向けの操作手順は [README](../README.md) を参照してください。
+
+## 開発環境
+
+Python 3.12を推奨します（ソースコードはPython 3.10以上を対象）。Tkと、GUIを表示できるデスクトップ環境が必要です。Windowsでは公式PythonのTcl/Tkを有効にしてください。Macでは利用するPythonに対応するTk、Linuxではディストリビューションのpython3-tkを導入してください。
+
+既存のチェックアウトを使用し、プロジェクトのルートで実行します。
+
+```sh
+python -m venv .venv
+```
+
+Windowsでは `.venv\Scripts\activate`、Mac / Linuxでは `source .venv/bin/activate` で仮想環境を有効にします。Mac / Linuxで `python` が見つからない場合、仮想環境の作成には `python3` を使用してください。
+
+```sh
+python -m pip install -r requirements.txt
+python -m akta_plotter.desktop
+```
+
+## コード構成
+
+| ファイル | 役割 |
+| --- | --- |
+| akta_plotter/data.py | CSVの読み込み、信号名・単位・対応する体積列の検出 |
+| akta_plotter/plot.py | 複数曲線の描画、単位別の軸、設定値の検証 |
+| akta_plotter/desktop.py | Tkの操作画面 |
+| scripts/desktop_entry.py | 配布版の起動と同梱環境の検証 |
+| scripts/build_desktop.py | 現在のOS向けのPyInstallerビルド |
+
+## データ形式
+
+UTF-8・BOM付きUTF-16・CP932・CP1252を試行します。コンマ・セミコロン・タブ区切りを判定します。
+
+UNICORN形式では2行目に信号名、3行目に単位、4行目以降に数値を想定します。Injectionより左にある、mL列と数値信号列のペアを抽出します。信号ごとにX列と有効な測定点数が異なることがあります。単位換算は行わず、ml / mLの横軸表記のみ正規化します。単位が空のペアはunitless軸にまとめます。
+
+一般的な表形式ではX列を手動選択します。自動形式判定は、すべてのUNICORNバージョンへの対応を保証するものではありません。
+
+## テスト
+
+```sh
+python -m unittest discover -s tests -v
+```
+
+テストはCSV解析、UTF-16、欠損値、重複ヘッダー、小数コンマ、信号固有のX列、Injection以降の除外、単位別の軸、重ね合わせ、軸範囲・目盛り・ラベル表示、線の色・太さ、不正入力、PNG/SVG/PDF出力を検証します。
+
+サンプルは `examples/demo.csv` と `examples/mixed_units.tsv` です。利用者から提供された実機CSVでUV 3_480 / UV 1_280の座標と画像出力を確認していますが、そのCSVはリポジトリに含めていません。
+
+書き込みが制限された環境では、Matplotlibのキャッシュを利用可能な場所に設定します。例：
+
+```sh
+mkdir -p /tmp/akta-mpl /tmp/akta-cache
+export MPLCONFIGDIR=/tmp/akta-mpl
+export XDG_CACHE_HOME=/tmp/akta-cache
+```
+
+## 配布版のビルド
+
+対象OS上のPython 3.12とTkを使用します。別OS向けにクロスコンパイルすることはできません。
+
+```sh
+python -m venv .build-venv
+```
+
+Windowsは `.build-venv\Scripts\activate`、Mac / Linuxは `source .build-venv/bin/activate` で有効にします。
+
+```sh
+python -m pip install -r requirements-build.txt
+python -m unittest discover -s tests -v
+python scripts/build_desktop.py
+```
+
+出力先は `dist/` です。診断用のコンソール付きビルドは `python scripts/build_desktop.py --console` です。生成物や仮想環境はコミットしません。
+
+### 同梱環境の検証
+
+Linuxの例：
+
+```sh
+dist/AKTA-Plotter/AKTA-Plotter --self-test
+xvfb-run -a dist/AKTA-Plotter/AKTA-Plotter --gui-smoke-test
+```
+
+GUIが使える場合はxvfb-runは不要です。Windowsの起動ファイルは `dist/AKTA-Plotter/AKTA-Plotter.exe`、Macは `dist/AKTA-Plotter.app/Contents/MacOS/AKTA-Plotter` です。
+
+`--self-test` は同梱環境でCSV・描画・画像出力を確認します。`--gui-smoke-test` はGUIを生成し、2ファイルの重ね合わせと画像保存を実行して終了します。Linuxクラウド環境では、ソースと配布版の両方でこれらのチェックを通過しています。OS別のビルド成功は、それぞれのCI実行結果で確認してください。
+
+### GitHub Actions
+
+[Build desktop applications](https://github.com/WassanBorn72/akta-plotter/actions/workflows/build-desktop.yml)は、対象コード・依存定義・ワークフローのmainへのpush、vで始まるタグ、またはRun workflowで実行します。Windows x64、Intel Mac、Apple Silicon Mac、Ubuntu 22.04 x64でネイティブビルドし、テストと同梱環境の検証後にアーカイブをArtifactsへ保存します。
+
+LinuxのCI配布版はglibc 2.35以上のGUI環境を対象とします。異なるLinux環境でローカルビルドした場合、必要なglibcバージョンはビルド環境に依存します。Macはdittoで.appをZIP化し、Windows / Linuxはフォルダ全体を配布します。
+
+コード署名・Apple公証・インストーラー・自動アップデート・GitHub Releasesへの自動公開は未実装です。

@@ -15,7 +15,7 @@ def main():
                '--name', 'AKTA-Plotter', '--paths', str(root),
                '--distpath', str(root / 'dist'), '--workpath', str(root / 'build'),
                '--specpath', str(root / 'build'), '--collect-data', 'matplotlib',
-               '--exclude-module', 'streamlit', '--exclude-module', 'pytest',
+               '--exclude-module', 'pytest',
                '--exclude-module', 'IPython',
                '--hidden-import', 'matplotlib.backends.backend_agg',
                '--hidden-import', 'matplotlib.backends.backend_svg',

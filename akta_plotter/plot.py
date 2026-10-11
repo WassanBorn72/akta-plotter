@@ -54,7 +54,7 @@ class Curve:
 
 
 def parse_axis(values, show_major=True, show_minor=False):
-    """Blank fields mean automatic; shared by desktop and browser."""
+    """Blank fields mean automatic; used by the desktop axis dialog."""
     try:
         numbers = [None if not str(v).strip() else float(v) for v in values]
     except (TypeError, ValueError):

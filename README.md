@@ -1,120 +1,71 @@
 # AKTA Plotter
 
-AKTA / UNICORNから書き出したCSVをプロットする初期版です。Windows・macOS・Linux向けのデスクトップ画面とブラウザ画面で、同じ読み込み・描画処理を使います。
+AKTA / UNICORNで書き出したCSVを、グラフとして表示・保存するPCアプリです。Windows・Mac・Linuxで利用できます。CSVは自分のPCで処理され、通常の利用にインターネット接続は不要です。
 
-## セットアップ
+## ダウンロードして起動する
 
-Python 3.10以上を用意してください。
+配布ファイルにはPythonが含まれるため、Pythonのインストールやコマンド入力は不要です。
 
-```sh
-python -m venv .venv
-```
+1. [アプリのダウンロードページ](https://github.com/WassanBorn72/akta-plotter/actions/workflows/build-desktop.yml)を開きます。ダウンロードにはGitHubへのログインが必要です。
+2. 緑のチェックが付いた最新の実行を開き、下部の「Artifacts」から、自分のPCに合ったファイルを選びます。成功した実行がない場合は、配布ファイルはまだ利用できません。
+3. ダウンロードしたZIPを展開します。中にもう一つZIPまたはtar.gzが入っている場合は、それも展開します。
+4. 下表の起動ファイルを開きます。
 
-Windowsでは `.venv\Scripts\activate`、macOS / Linuxでは `source .venv/bin/activate` で仮想環境を有効にし、次を実行します。
-
-```sh
-python -m pip install -r requirements.txt
-```
-
-デスクトップ版にはTkが必要です。Windowsの公式PythonではTcl/Tkを有効にしてください。Linuxではディストリビューションの `python3-tk`、macOSでは使用するPythonに対応するTkを導入してください。
-
-## デスクトップ版
-
-リポジトリのルートで実行します。
-
-```sh
-python -m akta_plotter.desktop
-```
-
-「CSVを追加」で複数のファイルを選択し、曲線のチェックを入れて「プロット更新」を押すと重ねて描画できます。ファイルごとに曲線を選択でき、各曲線の「色」ボタンと太さ（pt）を調整できます。「全ファイルを解除」で最初からやり直せます。
-
-「軸の設定」で横軸と単位ごとの縦軸に、最小値・最大値・主目盛り間隔・副目盛り間隔を指定できます。空欄は自動です。主目盛り・副目盛りそれぞれの数値表示も切り替えられます。目盛りは0を基準に指定した間隔で配置されます。
-
-「画像を保存」でPNG / SVG / PDFに保存できます。出力解像度は72〜600 DPIで指定可能です（SVG / PDFの線はベクトルで出力）。保存時には最新の線設定が反映されます。サンプルは `examples/demo.csv` と `examples/mixed_units.tsv` です。
-
-## ブラウザ版
-
-```sh
-python -m streamlit run browser_app.py --server.address 127.0.0.1
-```
-
-表示されたローカルアドレスをブラウザで開いてCSVを複数アップロードします。ファイルごとの表示曲線・色・太さを選択し、横軸と単位ごとの縦軸の範囲・目盛り・数値表示を設定できます。PNG / SVG / PDFの保存ボタンで設定を反映した画像をダウンロードできます。処理はStreamlitを起動したPC上で行われます。Pythonが必要なサーバー型アプリで、静的HTMLだけで動く版ではありません。外部公開する場合は別途認証や配備設定が必要です。
-
-## Macでブラウザ版を起動する手順
-
-1. [Python公式サイト](https://www.python.org/downloads/macos/)からPython 3.12以上をインストールします。
-2. 「ターミナル」を開き、以下を順に実行します。初回のコード取得にはインターネットが必要です。同名のフォルダが既にある場合は、そのフォルダを使用してください。
-
-```sh
-cd ~/Downloads
-curl -fL https://github.com/WassanBorn72/akta-plotter/archive/refs/heads/main.zip -o akta-plotter-main.zip
-unzip akta-plotter-main.zip
-cd akta-plotter-main
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install -r requirements.txt
-python -m streamlit run browser_app.py --server.address 127.0.0.1
-```
-
-3. SafariまたはChromeで `http://localhost:8501` を開きます。CSVを複数選択し、表示曲線・軸・線を調整して画像を保存できます。データはこのMac上で処理されます。
-4. 終了はターミナルで `Control + C`。次回は以下だけで起動できます。
-
-```sh
-cd ~/Downloads/akta-plotter-main
-source .venv/bin/activate
-python -m streamlit run browser_app.py --server.address 127.0.0.1
-```
-
-サーバー起動中はターミナルを開いたままにしてください。ポート8501が使用中なら `--server.port 8502` を付け、`http://localhost:8502` を開きます。
-
-## Python不要のデスクトップ配布版
-
-[GitHub Actions](https://github.com/WassanBorn72/akta-plotter/actions/workflows/build-desktop.yml)でOS別のアプリをビルドします。対象コードのmainへのpush、バージョンタグ、または「Run workflow」で実行されます。成功した実行のArtifactsから自分のOSのファイルをダウンロードし、GitHub側の外側のZIPを展開後、中のZIP / tar.gzを展開してください。ArtifactsのダウンロードにはGitHubへのログインが必要です。
-
-| 配布名 | 対象 | 起動ファイル |
+| PC | ダウンロードするファイル | 起動するもの |
 | --- | --- | --- |
-| macos-apple-silicon | MシリーズMac | AKTA-Plotter.app |
-| macos-intel | Intel Mac | AKTA-Plotter.app |
-| windows-x64 | Windows 64bit | AKTA-Plotter/AKTA-Plotter.exe |
-| linux-x64 | Linux x86_64（GUI環境、glibc 2.35以上） | AKTA-Plotter/AKTA-Plotter |
+| MシリーズのMac | AKTA-Plotter-macos-apple-silicon | AKTA-Plotter.app |
+| IntelのMac | AKTA-Plotter-macos-intel | AKTA-Plotter.app |
+| Windows（64ビット） | AKTA-Plotter-windows-x64 | AKTA-Plotterフォルダ内のAKTA-Plotter.exe |
+| Linux（x86_64） | AKTA-Plotter-linux-x64 | AKTA-Plotterフォルダ内のAKTA-Plotter |
 
-Macは `.app` をアプリケーションフォルダへ移動して起動します。Windows / Linuxは `AKTA-Plotter` フォルダ全体を保持してください。内部ファイルも必要です。いずれもPythonを別途インストールする必要はありません。データはローカルで処理し、通常の利用にインターネットは不要です。
+Macの種類は、画面左上のAppleメニュー →「このMacについて」で確認できます。「チップ」がApple Mで始まる場合はMシリーズ用、「プロセッサ」がIntelの場合はIntel用を選んでください。Macではアプリを「アプリケーション」フォルダに移動して使えます。
 
-配布版は現時点では開発者署名・Apple公証を行っていません。MacやWindowsで初回起動時に警告が出る場合は、入手元を確認し、OSの通常の許可画面を使用してください。Macではシステム設定の「プライバシーとセキュリティ」に許可操作が表示される場合があります。セキュリティ設定を全体で無効化する必要はありません。
+Windows・Linuxでは、展開したAKTA-Plotterフォルダ全体を保管してください。起動ファイルだけを移動すると動作しません。LinuxはUbuntu 22.04以降などの対応するデスクトップ環境が必要です。
 
-### 自分のPCでビルドする場合
+アプリは現在、開発者署名・Apple公証を行っていません。初回起動で警告が表示された場合は、このリポジトリから入手したことを確認して、OSの許可画面から起動してください。Macでは「システム設定」→「プライバシーとセキュリティ」に許可操作が表示される場合があります。
 
-対象OS上のPython 3.12とTkを使い、プロジェクトのルートで実行します。別OS向けのクロスコンパイルはできません。
+## CSVをグラフにする
 
-```sh
-python -m venv .build-venv
-```
+1. **「CSVを追加」**を押し、CSVファイルを選びます。複数ファイルを一度に選択したり、後から追加したりできます。
+2. ファイルごとの一覧で、表示したい曲線にチェックを入れます。
+3. **「プロット更新」**を押します。選択した曲線が同じグラフに重ねて表示されます。
 
-Windowsは `.build-venv\Scripts\activate`、Mac / Linuxは `source .build-venv/bin/activate` で有効にします。
+UNICORN形式のCSVでは、2行目の「Injection」より左にある数値項目を選択できます。横軸には各項目のmL列を使い、同じ単位の曲線は同じY軸、異なる単位の曲線は別のY軸に表示します。例えばUV曲線はmAU、導電率はmS/cmの軸に表示されます。
 
-```sh
-python -m pip install -r requirements-build.txt
-python -m unittest discover -s tests -v
-python scripts/build_desktop.py
-```
+その他の表形式では、各ファイルの「X軸」を選択してください。横軸の単位が異なる曲線は重ね合わせできません。データの単位換算や位置合わせは行いません。
 
-完成品は `dist/` に生成されます。診断用のコンソール付きビルドは `python scripts/build_desktop.py --console` です。生成物はコミットしません。
+すべてのファイルを外してやり直す場合は、**「全ファイルを解除」**を押します。
 
-## 読み込み形式と制限
+## 見た目を調整する
 
-- コンマ・セミコロン・タブ区切り、UTF-8・BOM付きUTF-16・CP932・CP1252を扱います。
-- 数値データの前にある説明行と、既知の単位が記載された単位行を検出します。
-- 重複した列名には連番を付けます。欠損値は曲線ごとに除外します。
-- UNICORN形式（2行目に信号名、3行目に単位、4行目から数値）では、Injectionより左のmL / 数値信号ペアを自動認識します。信号名を複数選択すると、各信号固有のmL列を横軸として、同じ単位の曲線は同じY軸、異なる単位の曲線は別のY軸で描画します。mAU・mS/cm・%・MPaなど、CSVに記載された単位を使います（単位換算は行いません）。単位のない信号はunitless軸にまとめます。文字のみのイベント列は対象外です。Injection以降の列は選択肢に含めません。
-- その他の表形式ではファイルごとにX軸を手動で選択します。横軸の単位が一致するファイルだけ重ね合わせ可能です。ml / mLは同じ単位として扱い、それ以外の単位換算や位置合わせは行いません。
-- 不正な軸範囲・0以下の目盛り間隔・過剰な目盛り数はエラーを表示します。
-- フラクション表示、ピーク積分、分子量校正は未実装です。
-- 添付された実機CSV（UTF-16・タブ区切り）でUV 3_480とUV 1_280の読み込み・座標・画像保存を確認済みです。他のエクスポート形式ではヘッダー・単位・X列の対応を確認してください。
+- **色・太さ**：各曲線の「色」ボタンで色を選び、その横の欄に線の太さを入力して「プロット更新」を押します。太さはpt単位です。
+- **タイトル**：「グラフタイトル」を変更して「プロット更新」を押します。
+- **軸**：「軸の設定」で横軸・単位ごとの縦軸を選び、最小値・最大値・主目盛りと副目盛りの間隔を設定します。空欄は自動設定です。「適用」で反映されます。
+- **目盛りの数値**：「軸の設定」で、主目盛り・副目盛りそれぞれの数値表示を切り替えます。
+- **拡大・移動**：グラフのツールバーを使います。
 
-## 検証
+目盛りは0を基準に、指定した間隔で配置されます。最小値は最大値より小さくし、目盛り間隔と線の太さには0より大きい数値を入力してください。
 
-```sh
-python -m unittest discover -s tests -v
-```
+## 画像を保存する
 
-数値列・単位・重複ヘッダー・UTF-16・欠損値・小数コンマ・単位ごとのY軸と、実際に描画する座標を検証します。配布版のビルドでは、同梱環境でのCSV・描画・PNG/SVG/PDF出力の検証とGUI起動チェックも実行します。各OS版の完成可否はGitHub Actionsの実行結果を確認してください。
+1. グラフと各設定を確認します。
+2. 「出力解像度」に72〜600の数値を入力します。通常は200 DPI、印刷用には300 DPIが目安です。
+3. **「画像を保存」**を押し、保存形式と保存先を選びます。
+
+| 形式 | 用途 |
+| --- | --- |
+| PNG | レポートやスライドに貼り付ける画像 |
+| SVG | 拡大しても線が鮮明な画像、図の編集 |
+| PDF | 印刷・共有 |
+
+保存には最新の線・タイトル・軸設定が反映されます。ツールバーで一時的に拡大した範囲ではなく、「軸の設定」で指定した範囲を使います。保存したい範囲は「軸の設定」で指定してください。
+
+## 対応データと現在の制限
+
+CSV・TSV・TXTを読み込めます。コンマ・セミコロン・タブ区切り、日本語を含む一般的な文字コードに対応しています。欠損値は曲線ごとに除外します。「Injection」以降の項目と、文字のみのイベントは曲線として表示しません。エクスポート形式によって読み込めない場合があります。
+
+フラクション表示、ピーク積分、分子量校正は未対応です。
+
+問題がある場合は、[Issues](https://github.com/WassanBorn72/akta-plotter/issues)にOS、表示されたエラー、再現手順を記載してください。CSVを共有する際は、公開してよいデータか確認してください。
+
+開発・テスト・配布ファイルの作成については、[開発者向けドキュメント](docs/DEVELOPMENT.md)を参照してください。
