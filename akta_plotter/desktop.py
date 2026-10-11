@@ -1,6 +1,7 @@
 """Run with python -m akta_plotter.desktop."""
 from pathlib import Path
 import tkinter as tk
+import sys
 from tkinter import colorchooser, filedialog, messagebox, ttk
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from . import __version__
@@ -11,7 +12,12 @@ from .plot import COLORS, Curve, make_overlay, parse_axis
 class App:
     def __init__(self, root):
         self.root = root
+        if sys.platform == 'win32':
+            import ctypes
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID('WassanBorn72.AKTAPlotter')
         root.title(f'AKTA Plotter {__version__}')
+        self.window_icon = tk.PhotoImage(file=str(Path(__file__).resolve().parent / 'assets' / 'icon.png'))
+        root.iconphoto(True, self.window_icon)
         root.geometry('1300x850')
         self.figure = None
         self.files = []

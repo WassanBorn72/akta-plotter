@@ -38,6 +38,8 @@ def main():
         import tempfile
         import akta_plotter.desktop as desktop
         app = App(root)
+        if app.window_icon.width() != 1024 or app.window_icon.height() != 1024:
+            raise RuntimeError('Bundled application icon is missing or invalid')
         with tempfile.TemporaryDirectory() as directory:
             paths = [Path(directory) / 'A.csv', Path(directory) / 'B.csv']
             for path in paths:
