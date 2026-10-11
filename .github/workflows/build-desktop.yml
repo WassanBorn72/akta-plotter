@@ -38,6 +38,11 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y python3-tk xvfb
       - name: Install build dependencies
         run: python -m pip install -r requirements-build.txt
+      - name: Verify release version
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          python -c "import os; from akta_plotter import __version__; assert os.environ['GITHUB_REF_NAME'] == 'v' + __version__, 'Tag and app version differ'"
       - name: Test
         run: python -m unittest discover -s tests -v
       - name: Build
@@ -77,3 +82,38 @@ jobs:
             dist/*.zip
             dist/*.tar.gz
           if-no-files-found: error
+
+  release:
+    name: Publish release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: AKTA-Plotter-*
+          path: release-assets
+          merge-multiple: true
+      - name: Validate archives and checksums
+        run: python scripts/prepare_release.py release-assets
+      - name: Create complete draft and publish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          notes="docs/releases/${GITHUB_REF_NAME}.md"
+          test -s "$notes"
+          if gh release view "$GITHUB_REF_NAME" --json isDraft > /tmp/akta-release.json; then
+            python -c "import json; assert json.load(open('/tmp/akta-release.json'))['isDraft'], 'Release is already published; refusing to replace it'"
+          else
+            gh release create "$GITHUB_REF_NAME" --verify-tag --draft --title "AKTA Plotter ${GITHUB_REF_NAME}" --notes-file "$notes"
+          fi
+          gh release upload "$GITHUB_REF_NAME" release-assets/* --clobber
+          gh release edit "$GITHUB_REF_NAME" --draft=false --latest

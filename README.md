@@ -6,9 +6,9 @@ AKTA / UNICORNで書き出したCSVを、グラフとして表示・保存する
 
 配布ファイルにはPythonが含まれるため、Pythonのインストールやコマンド入力は不要です。
 
-1. [アプリのダウンロードページ](https://github.com/WassanBorn72/akta-plotter/actions/workflows/build-desktop.yml)を開きます。ダウンロードにはGitHubへのログインが必要です。
-2. 緑のチェックが付いた最新の実行を開き、下部の「Artifacts」から、自分のPCに合ったファイルを選びます。成功した実行がない場合は、配布ファイルはまだ利用できません。
-3. ダウンロードしたZIPを展開します。中にもう一つZIPまたはtar.gzが入っている場合は、それも展開します。
+1. [正式リリースのダウンロードページ](https://github.com/WassanBorn72/akta-plotter/releases/latest)を開きます。
+2. ページ下部の「Assets」から、自分のPCに合ったZIPまたはtar.gzを選びます。「Source code」はアプリの配布ファイルではありません。
+3. ダウンロードしたファイルを展開します。
 4. 下表の起動ファイルを開きます。
 
 | PC | ダウンロードするファイル | 起動するもの |

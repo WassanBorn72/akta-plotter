@@ -3,6 +3,7 @@ from pathlib import Path
 import tkinter as tk
 from tkinter import colorchooser, filedialog, messagebox, ttk
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
+from . import __version__
 from .data import read_export, label
 from .plot import COLORS, Curve, make_overlay, parse_axis
 
@@ -10,7 +11,7 @@ from .plot import COLORS, Curve, make_overlay, parse_axis
 class App:
     def __init__(self, root):
         self.root = root
-        root.title('AKTA Plotter')
+        root.title(f'AKTA Plotter {__version__}')
         root.geometry('1300x850')
         self.figure = None
         self.files = []
